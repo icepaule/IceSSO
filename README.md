@@ -1,6 +1,6 @@
 # Schwalbe SSO — Authentik-Zentralisierung
 
-**Ist-Stand: 2026-07-15** · IdP: Authentik `2026.5.3` (`auth.mpauli.de`) · Edge: pfSense-HAProxy (`…154:443`, SNI-Frontend) · Identität: AD `paulis.net` (primär) + lokal (Fallback), 2FA (WebAuthn/TOTP) erzwungen.
+**Ist-Stand: 2026-07-16** · IdP: Authentik `2026.5.3` (`auth.mpauli.de`) · Edge: pfSense-HAProxy (`…154:443`, SNI-Frontend) · Identität: AD `paulis.net` (primär) + lokal (Fallback), 2FA (WebAuthn/TOTP) erzwungen.
 
 > ⚠️ Dieses Dokument enthält **keine** Passwörter/Secrets/Tokens. Interne IPs/Namen sind bewusst enthalten (privates Repo).
 
@@ -78,17 +78,25 @@ sequenceDiagram
 | **Mayan EDMS** | mayan01 :80 | A | **Native OIDC (mozilla-django-oidc)**; Email-Matching → `mpauli`(Admin) / `jella`(scoped); App auf mpauli+jella beschränkt |
 | **Monitor (Uptime Kuma)** | 10.1.1.222:3001 | B | Outpost-Gate, `disableAuth=true` (nahtlos); App auf mpauli beschränkt |
 | Jella-KI | ki02 :3001 | B | Outpost-Gate |
-| bewerbungsassistent, spiderfoot, maigret, blackbird, backup-dashboard, dhgrafana, rsshub, searxng u.a. | div. | B | Outpost-gated (21 Proxy-Provider) |
+| Portainer | NUC-HA :9443 | A | OIDC (CE OAuth) + Outpost-Gate |
+| Proxmox prox1/prox2 | :8006 | A | OIDC nativ (`proxmox`=prox2/`pve2`, `proxmox-prox1`=prox1) |
+| **ArgoCD** | K3s 10.10.0.237 | B | Outpost-Gate (16.07.); GitOps/CLI via Direkt-IP unberührt |
+| **CheckMK** | prox2 10.10.0.111 (Site `schwalbe`) | B | Outpost-Gate GUI (16.07.), **REST-API `/…/api/` + `agent-receiver` per skip bypassed** → Monitoring-Automation intakt |
+| **Superset** | K3s 10.10.0.253 | B | Outpost-Gate (16.07.), `/api/`+`/health` per skip bypassed |
+| **XWiki** | K3s 10.10.0.240 | B | Outpost-Gate (16.07.) |
+| **SketchForge** | prox2 LXC202 10.10.0.72 | B | Outpost-Gate (16.07.) |
+| **open-archiver** | K3s 10.10.0.232 | B | Outpost-Gate (16.07.) |
+| **iceseller / leak-monitoring / stock-analyzer** | K3s | B | Outpost-Gate (16.07., OSINT-Applets) |
+| bewerbungsassistent, spiderfoot, maigret, blackbird, backup-dashboard, dhgrafana, rsshub, searxng, netxalert, nsdap, openhands, ransomlook, solidtime, n8n, phpipam, pbs u.a. | div. | B | Outpost-gated (Embedded-Outpost, jetzt ~30 Proxy-Provider) |
+| **Node-RED** | HA-Addon | B | Bereits durch **HA-Auth** geschützt (HA selbst ge-SSO-t) → kein separates Gate |
 
 ### 🕓 Offen / geplant
 | Dienst | Host | Klasse | To-do |
 |---|---|---|---|
-| Portainer | NUC-HA :9443 | A | OIDC (CE OAuth) |
-| Proxmox prox2 | :8006 | B+C | GUI via Outpost; Node-Shell via Guacamole. LE-Cert `pve2.mpauli.de` bereits gesetzt |
-| Nextcloud | Synology | A | OIDC-App (Zert-Härtung bereits erledigt) |
-| ArgoCD, Superset, XWiki, Paperless-ngx, CheckMK, DSM | K3s/div. | A | App-OIDC |
-| Node-RED, n8n, NSDAP-UI, Paperless-AI | div. | B | Outpost-gated |
-| splunk67, conf67 | down | A | Backend erst hochfahren (bewusst zurückgestellt) |
+| DSM | Synology | A/B | DSM-SSO umständlich (separater Fall) |
+| icespider, ransomwatch | K3s | B | icespider = 0 Pods (down); ransomwatch = nur MongoDB → gaten wenn Web läuft |
+| splunk67, conf67, ecoDMS, Kibana-OSINT, OS-Watch, caldera, CAPEv2 | prox2 (gestoppt) | A/B | Backend erst hochfahren (bewusst zurückgestellt) |
+| Paperless-ngx, Paperless-AI | K3s | — | **Wird via Mayan abgelöst** → nicht mehr gaten |
 
 ### KEEP / Sonderfälle (bewusst offen)
 | Dienst | Entscheidung | Grund |
